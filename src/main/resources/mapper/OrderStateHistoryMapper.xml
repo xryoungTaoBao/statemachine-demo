@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yubzhou.statemachine.order.mapper.OrderStateHistoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.yubzhou.statemachine.order.entity.OrderStateHistory">
+        <id column="id" property="id"/>
+        <result column="order_id" property="orderId"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="from_state" property="fromState"/>
+        <result column="to_state" property="toState"/>
+        <result column="event" property="event"/>
+        <result column="event_type" property="eventType"/>
+        <result column="operator_id" property="operatorId"/>
+        <result column="operator_name" property="operatorName"/>
+        <result column="remark" property="remark"/>
+        <result column="duration_ms" property="durationMs"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_id, order_no, from_state, to_state, event, event_type,
+        operator_id, operator_name, remark, duration_ms, create_time
+    </sql>
+
+    <!-- 根据订单ID查询状态变更历史 -->
+    <select id="selectByOrderId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM t_order_state_history
+        WHERE order_id = #{orderId}
+        ORDER BY create_time ASC
+    </select>
+
+    <!-- 查询最近N条状态变更历史（用于回滚） -->
+    <select id="selectRecentByOrderId" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM t_order_state_history
+        WHERE order_id = #{orderId}
+          AND event_type = 'NORMAL'
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

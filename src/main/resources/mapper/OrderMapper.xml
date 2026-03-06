@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yubzhou.statemachine.order.mapper.OrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.yubzhou.statemachine.order.entity.Order">
+        <id column="id" property="id"/>
+        <result column="order_no" property="orderNo"/>
+        <result column="user_id" property="userId"/>
+        <result column="product_name" property="productName"/>
+        <result column="quantity" property="quantity"/>
+        <result column="amount" property="amount"/>
+        <result column="state" property="state"/>
+        <result column="payment_time" property="paymentTime"/>
+        <result column="ship_time" property="shipTime"/>
+        <result column="receive_time" property="receiveTime"/>
+        <result column="complete_time" property="completeTime"/>
+        <result column="cancel_time" property="cancelTime"/>
+        <result column="cancel_reason" property="cancelReason"/>
+        <result column="tracking_no" property="trackingNo"/>
+        <result column="logistics_company" property="logisticsCompany"/>
+        <result column="refund_reason" property="refundReason"/>
+        <result column="refund_amount" property="refundAmount"/>
+        <result column="remark" property="remark"/>
+        <result column="version" property="version"/>
+        <result column="deleted" property="deleted"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_no, user_id, product_name, quantity, amount, state,
+        payment_time, ship_time, receive_time, complete_time, cancel_time, cancel_reason,
+        tracking_no, logistics_company, refund_reason, refund_amount, remark,
+        version, deleted, create_time, update_time
+    </sql>
+
+    <!-- 根据状态分页查询订单 -->
+    <select id="selectByStatePage" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM t_order
+        WHERE deleted = 0
+        <if test="state != null and state != ''">
+            AND state = #{state}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询支付超时订单（支付超时关闭） -->
+    <select id="selectTimeoutOrders" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM t_order
+        WHERE deleted = 0
+          AND state = 'PENDING'
+          AND create_time &lt; #{timeoutBefore}
+        ORDER BY create_time ASC
+    </select>
+
+    <!-- 查询需要自动确认收货的订单 -->
+    <select id="selectAutoReceiveOrders" resultMap="BaseResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>
+        FROM t_order
+        WHERE deleted = 0
+          AND state = 'SHIPPED'
+          AND ship_time &lt; #{shipBefore}
+        ORDER BY ship_time ASC
+    </select>
+
+</mapper>
