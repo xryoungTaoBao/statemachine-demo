@@ -20,7 +20,7 @@ CREATE TABLE t_order (
     quantity        INT             NOT NULL DEFAULT 1      COMMENT 'Ordered quantity',
     unit_price      DECIMAL(12, 2)  NOT NULL                COMMENT 'Unit price at time of order',
     total_amount    DECIMAL(12, 2)  NOT NULL                COMMENT 'Total order amount',
-    state           VARCHAR(50)     NOT NULL DEFAULT 'PENDING_PAYMENT'
+    state           VARCHAR(50)     NOT NULL DEFAULT 'CREATED'
                                                             COMMENT 'Current state machine state',
     remark          VARCHAR(500)    NULL                    COMMENT 'Order remark / notes',
     payment_time    DATETIME        NULL                    COMMENT 'Timestamp when payment was confirmed',

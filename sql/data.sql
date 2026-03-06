@@ -4,13 +4,15 @@ USE statemachine_demo;
 --  Test data: 12 orders covering every state in the lifecycle
 --
 --  States used:
---    PENDING_PAYMENT  – created, awaiting payment
---    PENDING_SHIPMENT – paid, awaiting shipment
+--    CREATED          – order created, not yet submitted
+--    PENDING          – submitted, awaiting payment
+--    PAID             – paid, awaiting shipment
 --    SHIPPED          – shipped, awaiting receipt
---    COMPLETED        – buyer confirmed receipt
+--    RECEIVED         – buyer signed for delivery
+--    COMPLETED        – order fully complete
 --    CANCELLED        – order cancelled
---    REFUNDING        – refund requested, in progress
---    REFUNDED         – refund completed
+--    CLOSED           – closed (timeout / return / refund complete)
+--    REFUNDING        – refund requested, in progress (sub-states: REFUND_PENDING, REFUND_APPROVED, REFUND_REJECTED)
 -- ============================================================
 
 INSERT INTO t_order (
@@ -21,34 +23,34 @@ INSERT INTO t_order (
     timeout_at, deleted, version, create_time, update_time
 ) VALUES
 
--- 1. PENDING_PAYMENT – just placed, not yet paid
+-- 1. PENDING – submitted, not yet paid
 ('ORD20240101001', 1001, 2001, 'Wireless Bluetooth Headphones',
  1, 299.00, 299.00,
- 'PENDING_PAYMENT', 'Standard order',
+ 'PENDING', 'Standard order',
  NULL, NULL, NULL, NULL, NULL,
  DATE_ADD(NOW(), INTERVAL 30 MINUTE), 0, 0,
  DATE_SUB(NOW(), INTERVAL 10 MINUTE), DATE_SUB(NOW(), INTERVAL 10 MINUTE)),
 
--- 2. PENDING_PAYMENT – about to time out
+-- 2. PENDING – about to time out
 ('ORD20240101002', 1002, 2002, 'Mechanical Keyboard RGB',
  1, 499.00, 499.00,
- 'PENDING_PAYMENT', 'Discount applied',
+ 'PENDING', 'Discount applied',
  NULL, NULL, NULL, NULL, NULL,
  DATE_ADD(NOW(), INTERVAL 2 MINUTE), 0, 0,
  DATE_SUB(NOW(), INTERVAL 28 MINUTE), DATE_SUB(NOW(), INTERVAL 28 MINUTE)),
 
--- 3. PENDING_SHIPMENT – paid, warehouse picking
+-- 3. PAID – paid, warehouse picking
 ('ORD20240102001', 1003, 2003, '27-inch 4K Monitor',
  1, 1899.00, 1899.00,
- 'PENDING_SHIPMENT', NULL,
+ 'PAID', NULL,
  DATE_SUB(NOW(), INTERVAL 2 HOUR), NULL, NULL, NULL, NULL,
  NULL, 0, 1,
  DATE_SUB(NOW(), INTERVAL 3 HOUR), DATE_SUB(NOW(), INTERVAL 2 HOUR)),
 
--- 4. PENDING_SHIPMENT – paid, express requested
+-- 4. PAID – paid, express requested
 ('ORD20240102002', 1001, 2004, 'USB-C Hub 7-in-1',
  2, 149.00, 298.00,
- 'PENDING_SHIPMENT', 'Express shipping requested',
+ 'PAID', 'Express shipping requested',
  DATE_SUB(NOW(), INTERVAL 5 HOUR), NULL, NULL, NULL, NULL,
  NULL, 0, 1,
  DATE_SUB(NOW(), INTERVAL 6 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR)),
@@ -95,27 +97,27 @@ INSERT INTO t_order (
  NULL, 0, 1,
  DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
 
--- 10. CANCELLED – payment timed out (system cancel)
+-- 10. CLOSED – payment timed out (system close)
 ('ORD20240105002', 1008, 2010, 'Noise Cancelling Earbuds',
  1, 899.00, 899.00,
- 'CANCELLED', 'Payment timeout – auto-cancelled by system',
- NULL, NULL, NULL, DATE_SUB(NOW(), INTERVAL 3 HOUR), NULL,
+ 'CLOSED', 'Payment timeout – auto-closed by system',
+ NULL, NULL, NULL, NULL, NULL,
  DATE_SUB(NOW(), INTERVAL 3 HOUR), 0, 1,
  DATE_SUB(NOW(), INTERVAL 3 HOUR), DATE_SUB(NOW(), INTERVAL 3 HOUR)),
 
--- 11. REFUNDING – buyer requested refund after receiving
+-- 11. REFUND_PENDING – buyer requested refund, awaiting review
 ('ORD20240106001', 1003, 2001, 'Wireless Bluetooth Headphones',
  1, 299.00, 299.00,
- 'REFUNDING', 'Product defective – refund requested',
+ 'REFUND_PENDING', 'Product defective – refund requested',
  DATE_SUB(NOW(), INTERVAL 15 DAY), DATE_SUB(NOW(), INTERVAL 14 DAY),
  DATE_SUB(NOW(), INTERVAL 12 DAY), NULL, NULL,
  NULL, 0, 4,
  DATE_SUB(NOW(), INTERVAL 16 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
 
--- 12. REFUNDED – refund completed
+-- 12. CLOSED – refund completed (was REFUND_APPROVED -> CLOSED)
 ('ORD20240107001', 1009, 2005, 'Ergonomic Office Chair',
  1, 2499.00, 2499.00,
- 'REFUNDED', 'Wrong size – full refund approved',
+ 'CLOSED', 'Wrong size – full refund approved',
  DATE_SUB(NOW(), INTERVAL 20 DAY), DATE_SUB(NOW(), INTERVAL 19 DAY),
  DATE_SUB(NOW(), INTERVAL 17 DAY), NULL, DATE_SUB(NOW(), INTERVAL 15 DAY),
  NULL, 0, 5,
@@ -130,62 +132,67 @@ INSERT INTO t_order_state_history (
     operator_id, operator_type, remark, create_time
 )
 SELECT id, order_no,
-       'INITIAL',          'PENDING_PAYMENT', 'CREATE_ORDER',
-       user_id,            'USER',            'Order created',
+       'CREATED', 'PENDING', 'SUBMIT',
+       user_id,   'USER',    'Order submitted',
        create_time
 FROM t_order;
 
 -- Payment events
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'PENDING_PAYMENT', 'PENDING_SHIPMENT', 'PAY_ORDER', user_id, 'USER', 'Payment confirmed', payment_time
-FROM t_order WHERE state IN ('PENDING_SHIPMENT','SHIPPED','COMPLETED','REFUNDING','REFUNDED') AND payment_time IS NOT NULL;
+SELECT id, order_no, 'PENDING', 'PAID', 'PAY', user_id, 'USER', 'Payment confirmed', payment_time
+FROM t_order WHERE state IN ('PAID','SHIPPED','RECEIVED','COMPLETED','REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND payment_time IS NOT NULL;
 
 -- Shipment events
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'PENDING_SHIPMENT', 'SHIPPED', 'SHIP_ORDER', 10001, 'SYSTEM', 'Shipped by warehouse', ship_time
-FROM t_order WHERE state IN ('SHIPPED','COMPLETED','REFUNDING','REFUNDED') AND ship_time IS NOT NULL;
+SELECT id, order_no, 'PAID', 'SHIPPED', 'SHIP', 10001, 'SYSTEM', 'Shipped by warehouse', ship_time
+FROM t_order WHERE state IN ('SHIPPED','RECEIVED','COMPLETED','REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND ship_time IS NOT NULL;
 
 -- Receive events
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'SHIPPED', 'COMPLETED', 'CONFIRM_RECEIPT', user_id, 'USER', 'Buyer confirmed receipt', receive_time
-FROM t_order WHERE state IN ('COMPLETED','REFUNDING','REFUNDED') AND receive_time IS NOT NULL;
+SELECT id, order_no, 'SHIPPED', 'RECEIVED', 'RECEIVE', user_id, 'USER', 'Buyer confirmed receipt', receive_time
+FROM t_order WHERE state IN ('RECEIVED','COMPLETED','REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND receive_time IS NOT NULL;
+
+-- Complete events (RECEIVED -> COMPLETED)
+INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
+SELECT id, order_no, 'RECEIVED', 'COMPLETED', 'COMPLETE', user_id, 'USER', 'Order completed', receive_time
+FROM t_order WHERE state = 'COMPLETED' AND receive_time IS NOT NULL;
 
 -- Cancel events
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'PENDING_PAYMENT', 'CANCELLED', 'CANCEL_ORDER',
+SELECT id, order_no, 'PENDING', 'CANCELLED', 'CANCEL',
        CASE WHEN remark LIKE '%system%' THEN 10000 ELSE user_id END,
        CASE WHEN remark LIKE '%system%' THEN 'SYSTEM' ELSE 'USER' END,
        remark, cancel_time
 FROM t_order WHERE state = 'CANCELLED' AND cancel_time IS NOT NULL;
 
--- Refund request events
+-- Refund request events (PAID -> REFUNDING)
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'COMPLETED', 'REFUNDING', 'REQUEST_REFUND', user_id, 'USER', 'Refund requested', DATE_SUB(NOW(), INTERVAL 1 DAY)
-FROM t_order WHERE state IN ('REFUNDING','REFUNDED');
+SELECT id, order_no, 'PAID', 'REFUND_PENDING', 'REFUND', user_id, 'USER', 'Refund requested', DATE_SUB(NOW(), INTERVAL 1 DAY)
+FROM t_order WHERE state IN ('REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND receive_time IS NULL;
 
--- Refund complete events
+-- Refund complete events (REFUND_APPROVED -> CLOSED)
 INSERT INTO t_order_state_history (order_id, order_no, from_state, to_state, event, operator_id, operator_type, remark, create_time)
-SELECT id, order_no, 'REFUNDING', 'REFUNDED', 'COMPLETE_REFUND', 10000, 'SYSTEM', 'Refund completed', refund_time
-FROM t_order WHERE state = 'REFUNDED' AND refund_time IS NOT NULL;
+SELECT id, order_no, 'REFUND_APPROVED', 'CLOSED', 'COMPLETE', 10000, 'SYSTEM', 'Refund completed', refund_time
+FROM t_order WHERE state = 'CLOSED' AND refund_time IS NOT NULL;
 
 -- ============================================================
 --  Matching event log records
 -- ============================================================
 
 INSERT INTO t_order_event_log (order_id, order_no, event, state_before, state_after, success, context_data, operator_id, operator_type, duration_ms, create_time)
-SELECT id, order_no, 'CREATE_ORDER', 'INITIAL', 'PENDING_PAYMENT', 1,
+SELECT id, order_no, 'SUBMIT', 'CREATED', 'PENDING', 1,
        JSON_OBJECT('productId', product_id, 'quantity', quantity, 'totalAmount', total_amount),
        user_id, 'USER', 45, create_time
 FROM t_order;
 
 INSERT INTO t_order_event_log (order_id, order_no, event, state_before, state_after, success, context_data, operator_id, operator_type, duration_ms, create_time)
-SELECT id, order_no, 'PAY_ORDER', 'PENDING_PAYMENT', 'PENDING_SHIPMENT', 1,
+SELECT id, order_no, 'PAY', 'PENDING', 'PAID', 1,
        JSON_OBJECT('paymentMethod', 'ALIPAY', 'totalAmount', total_amount),
        user_id, 'USER', 120, payment_time
-FROM t_order WHERE state IN ('PENDING_SHIPMENT','SHIPPED','COMPLETED','REFUNDING','REFUNDED') AND payment_time IS NOT NULL;
+FROM t_order WHERE state IN ('PAID','SHIPPED','RECEIVED','COMPLETED','REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND payment_time IS NOT NULL;
 
 INSERT INTO t_order_event_log (order_id, order_no, event, state_before, state_after, success, context_data, operator_id, operator_type, duration_ms, create_time)
-SELECT id, order_no, 'SHIP_ORDER', 'PENDING_SHIPMENT', 'SHIPPED', 1,
+SELECT id, order_no, 'SHIP', 'PAID', 'SHIPPED', 1,
        JSON_OBJECT('trackingNo', CONCAT('SF', FLOOR(RAND()*9000000000)+1000000000), 'carrier', 'SF-EXPRESS'),
        10001, 'SYSTEM', 88, ship_time
-FROM t_order WHERE state IN ('SHIPPED','COMPLETED','REFUNDING','REFUNDED') AND ship_time IS NOT NULL;
+FROM t_order WHERE state IN ('SHIPPED','RECEIVED','COMPLETED','REFUNDING','REFUND_PENDING','REFUND_APPROVED','REFUND_REJECTED','CLOSED') AND ship_time IS NOT NULL;
