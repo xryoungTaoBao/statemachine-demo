@@ -13,7 +13,6 @@
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/order/service/OrderService.java
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/order/controller/OrderController.java
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/config/RedissonConfig.java
-/home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/config/properties/OrderProperties.java
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/order/service/impl/OrderEventLogServiceImpl.java
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/management/controller/OrderManagementController.java
 /home/runner/work/statemachine-demo/statemachine-demo/src/main/java/com/yubzhou/statemachine/statistics/service/OrderStatisticsService.java

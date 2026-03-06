@@ -23,10 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -43,7 +43,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final StateMachineProperties smProperties;
     private final RollbackProperties rollbackProperties;
 
-    /** Available events per state, derived from the state machine configuration. */
+    /** 订单号序号计数器（同一秒内防重） */
+    private static final AtomicInteger ORDER_SEQUENCE = new AtomicInteger(0);
+    /** 订单号日期格式 */
+    private static final DateTimeFormatter ORDER_NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    /** 每个状态可触发的事件列表（根据状态机配置生成） */
     private static final Map<OrderState, List<OrderEvent>> STATE_EVENTS = Map.ofEntries(
             Map.entry(OrderState.CREATED,          List.of(OrderEvent.SUBMIT, OrderEvent.CANCEL)),
             Map.entry(OrderState.PENDING,          List.of(OrderEvent.PAY, OrderEvent.CANCEL, OrderEvent.TIMEOUT)),
@@ -168,7 +173,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return baseMapper.selectAutoReceiveOrders(shippedBefore);
     }
 
+    /**
+     * 生成订单号：格式为 ORD + yyyyMMddHHmmss + 3位序号
+     * <p>示例：ORD20260306143052001</p>
+     * <p>使用 AtomicInteger 保证同一秒内序号不重复（超过999自动重置）</p>
+     */
     private String generateOrderNo() {
-        return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+        String timestamp = LocalDateTime.now().format(ORDER_NO_FORMATTER);
+        int seq = ORDER_SEQUENCE.incrementAndGet() % 1000;
+        return String.format("ORD%s%03d", timestamp, seq);
     }
 }

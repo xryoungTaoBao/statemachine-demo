@@ -15,7 +15,6 @@ com/yubzhou/statemachine/statemachine/service/OrderStateMachineServiceImpl.class
 com/yubzhou/statemachine/config/properties/SchedulerProperties$CleanupTaskConfig.class
 com/yubzhou/statemachine/order/dto/OrderEventRequest.class
 com/yubzhou/statemachine/statistics/service/OrderStatisticsService.class
-com/yubzhou/statemachine/config/properties/OrderProperties.class
 com/yubzhou/statemachine/order/entity/OrderEventLog.class
 com/yubzhou/statemachine/order/service/impl/OrderStateHistoryServiceImpl.class
 com/yubzhou/statemachine/config/RedisConfig.class

@@ -161,7 +161,8 @@ public class OrderStateMachineConfig extends StateMachineConfigurerAdapter<Order
                 .event(OrderEvent.COMPLETE)
                 .and()
 
-            // 退款拒绝后回到已支付状态
+            // 退款拒绝后可通过 CANCEL（取消退款）事件回到已支付状态，继续订单流程
+            // 注意：此处 CANCEL 表示"取消退款申请"而非"取消整个订单"
             .withExternal()
                 .source(OrderState.REFUND_REJECTED).target(OrderState.PAID)
                 .event(OrderEvent.CANCEL);

@@ -11,6 +11,8 @@ import com.yubzhou.statemachine.order.service.OrderStateHistoryService;
 import com.yubzhou.statemachine.statemachine.constant.StateMachineContextKeys;
 import com.yubzhou.statemachine.statemachine.enums.OrderEvent;
 import com.yubzhou.statemachine.statemachine.enums.OrderState;
+import com.yubzhou.statemachine.statemachine.interceptor.OrderStatePersistInterceptor;
+import com.yubzhou.statemachine.statemachine.listener.OrderStateMachineListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -21,7 +23,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Default implementation of {@link OrderStateMachineService}.
+ * 订单状态机服务实现类
+ * <p>
+ * 负责获取、配置和释放订单状态机，以及发送事件并记录状态变更历史。
+ * </p>
  */
 @Slf4j
 @Service
@@ -32,6 +37,8 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     private final OrderStateHistoryService historyService;
     private final OrderEventLogService eventLogService;
     private final StateMachineProperties smProperties;
+    private final OrderStatePersistInterceptor persistInterceptor;
+    private final OrderStateMachineListener stateMachineListener;
 
     @Override
     public void sendEvent(Order order, OrderEvent event, OrderEventRequest request) {
@@ -81,9 +88,14 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
         StateMachine<OrderState, OrderEvent> sm = stateMachineFactory.getStateMachine(machineId);
         sm.stopReactively().block();
         sm.getStateMachineAccessor()
-          .doWithAllRegions(accessor -> accessor.resetStateMachineReactively(
-              new org.springframework.statemachine.support.DefaultStateMachineContext<>(
-                  currentState, null, null, null)).block());
+          .doWithAllRegions(accessor -> {
+              // 注册持久化拦截器和监听器
+              accessor.addStateMachineInterceptor(persistInterceptor);
+              accessor.resetStateMachineReactively(
+                  new org.springframework.statemachine.support.DefaultStateMachineContext<>(
+                      currentState, null, null, null)).block();
+          });
+        sm.addStateListener(stateMachineListener);
         sm.startReactively().block();
         return sm;
     }
