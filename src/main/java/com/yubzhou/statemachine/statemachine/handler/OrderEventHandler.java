@@ -27,7 +27,7 @@ public class OrderEventHandler {
 
     /** States that allow a cancellation. */
     private static final List<OrderState> CANCELLABLE_STATES =
-            List.of(OrderState.PENDING_PAYMENT, OrderState.PENDING_SHIPMENT);
+            List.of(OrderState.CREATED, OrderState.PENDING);
 
     /**
      * Send any event to the state machine with pre-validation.
@@ -45,7 +45,7 @@ public class OrderEventHandler {
         OrderState currentState = OrderState.valueOf(order.getState());
         log.debug("Handling event {} for order {} (current state: {})", event, orderId, currentState);
 
-        if (event == OrderEvent.CANCEL_ORDER && !CANCELLABLE_STATES.contains(currentState)) {
+        if (event == OrderEvent.CANCEL && !CANCELLABLE_STATES.contains(currentState)) {
             throw new BusinessException("Order " + orderId + " cannot be cancelled in state " + currentState);
         }
 

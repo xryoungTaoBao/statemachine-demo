@@ -48,7 +48,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                 .setQuantity(request.getQuantity())
                 .setUnitPrice(request.getUnitPrice())
                 .setTotalAmount(request.getUnitPrice().multiply(BigDecimal.valueOf(request.getQuantity())))
-                .setState(OrderState.PENDING_PAYMENT.name())
+                .setState(OrderState.CREATED.name())
                 .setRemark(request.getRemark())
                 .setTimeoutAt(LocalDateTime.now().plusMinutes(smProperties.getPaymentTimeoutMinutes()));
 

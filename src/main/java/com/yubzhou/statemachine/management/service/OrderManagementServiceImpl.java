@@ -21,22 +21,22 @@ public class OrderManagementServiceImpl implements OrderManagementService {
 
     @Override
     public void shipOrder(Long orderId, OrderEventRequest request) {
-        sendEvent(orderId, OrderEvent.SHIP_ORDER, request);
+        sendEvent(orderId, OrderEvent.SHIP, request);
     }
 
     @Override
     public void approveRefund(Long orderId, OrderEventRequest request) {
-        sendEvent(orderId, OrderEvent.APPROVE_REFUND, request);
+        sendEvent(orderId, OrderEvent.REFUND_APPROVE, request);
     }
 
     @Override
     public void completeRefund(Long orderId, OrderEventRequest request) {
-        sendEvent(orderId, OrderEvent.COMPLETE_REFUND, request);
+        sendEvent(orderId, OrderEvent.COMPLETE, request);
     }
 
     @Override
     public void rejectRefund(Long orderId, OrderEventRequest request) {
-        sendEvent(orderId, OrderEvent.REJECT_REFUND, request);
+        sendEvent(orderId, OrderEvent.REFUND_REJECT, request);
     }
 
     private void sendEvent(Long orderId, OrderEvent event, OrderEventRequest request) {

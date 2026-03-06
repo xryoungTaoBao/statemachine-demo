@@ -1,40 +1,71 @@
 package com.yubzhou.statemachine.statemachine.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+
 /**
- * Order state machine events (triggers for state transitions).
+ * 订单事件枚举
  */
+@Getter
 public enum OrderEvent {
 
-    /** Customer places a new order. */
-    CREATE_ORDER,
+    /** 提交订单 */
+    SUBMIT(10, "提交订单"),
 
-    /** Customer completes payment. */
-    PAY_ORDER,
+    /** 支付 */
+    PAY(20, "支付"),
 
-    /** Payment deadline exceeded – system auto-cancels. */
-    PAYMENT_TIMEOUT,
+    /** 取消订单 */
+    CANCEL(30, "取消订单"),
 
-    /** Warehouse ships the goods. */
-    SHIP_ORDER,
+    /** 支付超时 */
+    TIMEOUT(40, "支付超时"),
 
-    /** Buyer confirms receipt of goods. */
-    CONFIRM_RECEIPT,
+    /** 发货 */
+    SHIP(50, "发货"),
 
-    /** System auto-confirms receipt after timeout. */
-    AUTO_CONFIRM_RECEIPT,
+    /** 签收 */
+    RECEIVE(60, "签收"),
 
-    /** Buyer cancels the order. */
-    CANCEL_ORDER,
+    /** 完成 */
+    COMPLETE(70, "完成"),
 
-    /** Buyer requests a refund. */
-    REQUEST_REFUND,
+    /** 申请退款 */
+    REFUND(80, "申请退款"),
 
-    /** Staff / system approves the refund. */
-    APPROVE_REFUND,
+    /** 退款审批通过 */
+    REFUND_APPROVE(81, "退款审批通过"),
 
-    /** Refund money is returned to buyer. */
-    COMPLETE_REFUND,
+    /** 退款审批拒绝 */
+    REFUND_REJECT(82, "退款审批拒绝"),
 
-    /** Staff / system rejects the refund request. */
-    REJECT_REFUND
+    /** 退货 */
+    RETURN(90, "退货");
+
+    @EnumValue
+    private final int code;
+    private final String desc;
+
+    OrderEvent(int code, String desc) {
+        this.code = code;
+        this.desc = desc;
+    }
+
+    @JsonValue
+    public int getCode() {
+        return code;
+    }
+
+    /**
+     * 根据编码获取枚举
+     */
+    public static OrderEvent fromCode(int code) {
+        for (OrderEvent event : values()) {
+            if (event.code == code) {
+                return event;
+            }
+        }
+        throw new IllegalArgumentException("未知的订单事件编码: " + code);
+    }
 }

@@ -2,6 +2,7 @@ package com.yubzhou.statemachine.config;
 
 import com.yubzhou.statemachine.statemachine.enums.OrderEvent;
 import com.yubzhou.statemachine.statemachine.enums.OrderState;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.statemachine.config.EnableStateMachineFactory;
 import org.springframework.statemachine.config.StateMachineConfigurerAdapter;
@@ -12,95 +13,157 @@ import org.springframework.statemachine.config.builders.StateMachineTransitionCo
 import java.util.EnumSet;
 
 /**
- * Spring Statemachine configuration – defines all states and transitions
- * for the order lifecycle.
+ * Spring Statemachine 核心配置
+ * <p>
+ * 定义订单状态机的所有状态、子状态及状态转换关系。
+ * 使用工厂模式支持多实例并发。
+ * </p>
  */
+@Slf4j
 @Configuration
 @EnableStateMachineFactory
 public class OrderStateMachineConfig extends StateMachineConfigurerAdapter<OrderState, OrderEvent> {
 
+    /**
+     * 状态机全局配置
+     */
     @Override
     public void configure(StateMachineConfigurationConfigurer<OrderState, OrderEvent> config) throws Exception {
-        config.withConfiguration()
-              .autoStartup(false);
+        config
+            .withConfiguration()
+                .autoStartup(false);
     }
 
+    /**
+     * 状态定义
+     */
     @Override
     public void configure(StateMachineStateConfigurer<OrderState, OrderEvent> states) throws Exception {
-        states.withStates()
-              .initial(OrderState.PENDING_PAYMENT)
-              .end(OrderState.COMPLETED)
-              .end(OrderState.CANCELLED)
-              .end(OrderState.REFUNDED)
-              .states(EnumSet.allOf(OrderState.class));
+        states
+            .withStates()
+                // 初始状态：已创建
+                .initial(OrderState.CREATED)
+                // 终态
+                .end(OrderState.COMPLETED)
+                .end(OrderState.CANCELLED)
+                .end(OrderState.CLOSED)
+                // 普通状态
+                .states(EnumSet.of(
+                    OrderState.CREATED,
+                    OrderState.PENDING,
+                    OrderState.PAID,
+                    OrderState.SHIPPED,
+                    OrderState.RECEIVED,
+                    OrderState.COMPLETED,
+                    OrderState.CANCELLED,
+                    OrderState.CLOSED,
+                    OrderState.REFUNDING
+                ))
+            .and()
+            // 退款子状态机
+            .withStates()
+                .parent(OrderState.REFUNDING)
+                .initial(OrderState.REFUND_PENDING)
+                .states(EnumSet.of(
+                    OrderState.REFUND_PENDING,
+                    OrderState.REFUND_APPROVED,
+                    OrderState.REFUND_REJECTED
+                ));
     }
 
+    /**
+     * 状态转换定义
+     */
     @Override
     public void configure(StateMachineTransitionConfigurer<OrderState, OrderEvent> transitions) throws Exception {
         transitions
-            // PAY_ORDER: PENDING_PAYMENT -> PENDING_SHIPMENT
+            // 提交订单: CREATED -> PENDING
             .withExternal()
-                .source(OrderState.PENDING_PAYMENT).target(OrderState.PENDING_SHIPMENT)
-                .event(OrderEvent.PAY_ORDER)
+                .source(OrderState.CREATED).target(OrderState.PENDING)
+                .event(OrderEvent.SUBMIT)
                 .and()
 
-            // PAYMENT_TIMEOUT: PENDING_PAYMENT -> CANCELLED
+            // 支付: PENDING -> PAID
             .withExternal()
-                .source(OrderState.PENDING_PAYMENT).target(OrderState.CANCELLED)
-                .event(OrderEvent.PAYMENT_TIMEOUT)
+                .source(OrderState.PENDING).target(OrderState.PAID)
+                .event(OrderEvent.PAY)
                 .and()
 
-            // CANCEL_ORDER: PENDING_PAYMENT -> CANCELLED
+            // 取消订单: CREATED -> CANCELLED
             .withExternal()
-                .source(OrderState.PENDING_PAYMENT).target(OrderState.CANCELLED)
-                .event(OrderEvent.CANCEL_ORDER)
+                .source(OrderState.CREATED).target(OrderState.CANCELLED)
+                .event(OrderEvent.CANCEL)
                 .and()
 
-            // CANCEL_ORDER: PENDING_SHIPMENT -> CANCELLED
+            // 取消订单: PENDING -> CANCELLED
             .withExternal()
-                .source(OrderState.PENDING_SHIPMENT).target(OrderState.CANCELLED)
-                .event(OrderEvent.CANCEL_ORDER)
+                .source(OrderState.PENDING).target(OrderState.CANCELLED)
+                .event(OrderEvent.CANCEL)
                 .and()
 
-            // SHIP_ORDER: PENDING_SHIPMENT -> SHIPPED
+            // 支付超时: PENDING -> CLOSED
             .withExternal()
-                .source(OrderState.PENDING_SHIPMENT).target(OrderState.SHIPPED)
-                .event(OrderEvent.SHIP_ORDER)
+                .source(OrderState.PENDING).target(OrderState.CLOSED)
+                .event(OrderEvent.TIMEOUT)
                 .and()
 
-            // CONFIRM_RECEIPT: SHIPPED -> COMPLETED
+            // 发货: PAID -> SHIPPED
             .withExternal()
-                .source(OrderState.SHIPPED).target(OrderState.COMPLETED)
-                .event(OrderEvent.CONFIRM_RECEIPT)
+                .source(OrderState.PAID).target(OrderState.SHIPPED)
+                .event(OrderEvent.SHIP)
                 .and()
 
-            // AUTO_CONFIRM_RECEIPT: SHIPPED -> COMPLETED
+            // 签收: SHIPPED -> RECEIVED
             .withExternal()
-                .source(OrderState.SHIPPED).target(OrderState.COMPLETED)
-                .event(OrderEvent.AUTO_CONFIRM_RECEIPT)
+                .source(OrderState.SHIPPED).target(OrderState.RECEIVED)
+                .event(OrderEvent.RECEIVE)
                 .and()
 
-            // REQUEST_REFUND: COMPLETED -> REFUNDING
+            // 完成: RECEIVED -> COMPLETED
             .withExternal()
-                .source(OrderState.COMPLETED).target(OrderState.REFUNDING)
-                .event(OrderEvent.REQUEST_REFUND)
+                .source(OrderState.RECEIVED).target(OrderState.COMPLETED)
+                .event(OrderEvent.COMPLETE)
                 .and()
 
-            // APPROVE_REFUND: REFUNDING -> REFUNDING (internal approval step)
-            .withInternal()
-                .source(OrderState.REFUNDING)
-                .event(OrderEvent.APPROVE_REFUND)
+            // 退货退款: RECEIVED -> CLOSED
+            .withExternal()
+                .source(OrderState.RECEIVED).target(OrderState.CLOSED)
+                .event(OrderEvent.RETURN)
                 .and()
 
-            // COMPLETE_REFUND: REFUNDING -> REFUNDED
+            // 退款完成: COMPLETED -> CLOSED
             .withExternal()
-                .source(OrderState.REFUNDING).target(OrderState.REFUNDED)
-                .event(OrderEvent.COMPLETE_REFUND)
+                .source(OrderState.COMPLETED).target(OrderState.CLOSED)
+                .event(OrderEvent.RETURN)
                 .and()
 
-            // REJECT_REFUND: REFUNDING -> COMPLETED
+            // 申请退款: PAID -> REFUNDING
             .withExternal()
-                .source(OrderState.REFUNDING).target(OrderState.COMPLETED)
-                .event(OrderEvent.REJECT_REFUND);
+                .source(OrderState.PAID).target(OrderState.REFUNDING)
+                .event(OrderEvent.REFUND)
+                .and()
+
+            // 退款审批通过: REFUND_PENDING -> REFUND_APPROVED
+            .withExternal()
+                .source(OrderState.REFUND_PENDING).target(OrderState.REFUND_APPROVED)
+                .event(OrderEvent.REFUND_APPROVE)
+                .and()
+
+            // 退款审批拒绝: REFUND_PENDING -> REFUND_REJECTED
+            .withExternal()
+                .source(OrderState.REFUND_PENDING).target(OrderState.REFUND_REJECTED)
+                .event(OrderEvent.REFUND_REJECT)
+                .and()
+
+            // 退款完成（退款已批准 -> 已关闭）
+            .withExternal()
+                .source(OrderState.REFUND_APPROVED).target(OrderState.CLOSED)
+                .event(OrderEvent.COMPLETE)
+                .and()
+
+            // 退款拒绝后回到已支付状态
+            .withExternal()
+                .source(OrderState.REFUND_REJECTED).target(OrderState.PAID)
+                .event(OrderEvent.CANCEL);
     }
 }

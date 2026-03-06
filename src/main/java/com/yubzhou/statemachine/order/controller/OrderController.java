@@ -56,43 +56,43 @@ public class OrderController {
     @Operation(summary = "Pay for an order")
     @PostMapping("/{orderId}/pay")
     public Result<OrderVO> pay(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.PAY_ORDER, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.PAY, request));
     }
 
     @Operation(summary = "Ship an order")
     @PostMapping("/{orderId}/ship")
     public Result<OrderVO> ship(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.SHIP_ORDER, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.SHIP, request));
     }
 
     @Operation(summary = "Confirm receipt of an order")
     @PostMapping("/{orderId}/confirm-receipt")
     public Result<OrderVO> confirmReceipt(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.CONFIRM_RECEIPT, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.RECEIVE, request));
     }
 
     @Operation(summary = "Cancel an order")
     @PostMapping("/{orderId}/cancel")
     public Result<OrderVO> cancel(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.CANCEL_ORDER, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.CANCEL, request));
     }
 
     @Operation(summary = "Request a refund")
     @PostMapping("/{orderId}/request-refund")
     public Result<OrderVO> requestRefund(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.REQUEST_REFUND, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.REFUND, request));
     }
 
     @Operation(summary = "Complete a refund")
     @PostMapping("/{orderId}/complete-refund")
     public Result<OrderVO> completeRefund(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.COMPLETE_REFUND, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.COMPLETE, request));
     }
 
     @Operation(summary = "Reject a refund request")
     @PostMapping("/{orderId}/reject-refund")
     public Result<OrderVO> rejectRefund(@PathVariable Long orderId, @RequestBody OrderEventRequest request) {
-        return Result.success(orderService.sendEvent(orderId, OrderEvent.REJECT_REFUND, request));
+        return Result.success(orderService.sendEvent(orderId, OrderEvent.REFUND_REJECT, request));
     }
 
     @Operation(summary = "Get state transition history for an order")

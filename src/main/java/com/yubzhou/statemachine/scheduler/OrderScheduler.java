@@ -55,7 +55,7 @@ public class OrderScheduler {
         if (!paymentTimeoutEnabled) return;
 
         List<Order> timedOut = orderService.list(new LambdaQueryWrapper<Order>()
-                .eq(Order::getState, OrderState.PENDING_PAYMENT.name())
+                .eq(Order::getState, OrderState.PENDING.name())
                 .lt(Order::getTimeoutAt, LocalDateTime.now()));
 
         if (timedOut.isEmpty()) return;
@@ -67,7 +67,7 @@ public class OrderScheduler {
 
         for (Order order : timedOut) {
             try {
-                stateMachineService.sendEvent(order, OrderEvent.PAYMENT_TIMEOUT, req);
+                stateMachineService.sendEvent(order, OrderEvent.TIMEOUT, req);
             } catch (Exception e) {
                 log.error("Failed to auto-cancel order {}: {}", order.getOrderNo(), e.getMessage());
             }
@@ -93,7 +93,7 @@ public class OrderScheduler {
 
         for (Order order : shipped) {
             try {
-                stateMachineService.sendEvent(order, OrderEvent.AUTO_CONFIRM_RECEIPT, req);
+                stateMachineService.sendEvent(order, OrderEvent.RECEIVE, req);
             } catch (Exception e) {
                 log.error("Failed to auto-confirm receipt for order {}: {}", order.getOrderNo(), e.getMessage());
             }

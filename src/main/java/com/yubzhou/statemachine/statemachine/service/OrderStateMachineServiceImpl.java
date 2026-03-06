@@ -58,12 +58,15 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
             }
 
             Message<OrderEvent> message = MessageBuilder.withPayload(event).build();
-            Boolean accepted = sm.sendEvent(Mono.just(message)).blockFirst();
+            org.springframework.statemachine.StateMachineEventResult<OrderState, OrderEvent> result =
+                    sm.sendEvent(Mono.just(message)).blockFirst();
+            boolean accepted = result != null &&
+                    result.getResultType() == org.springframework.statemachine.StateMachineEventResult.ResultType.ACCEPTED;
 
             OrderState stateAfter = sm.getState().getId();
             long duration = System.currentTimeMillis() - start;
 
-            if (Boolean.TRUE.equals(accepted) && !stateAfter.equals(stateBefore)) {
+            if (accepted && !stateAfter.equals(stateBefore)) {
                 saveHistory(order, stateBefore, stateAfter, event, request);
                 saveEventLog(order, event, stateBefore, stateAfter, true, null, duration, request);
                 log.info("Order {} transitioned {} -> {} via {}", order.getOrderNo(), stateBefore, stateAfter, event);

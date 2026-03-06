@@ -8,16 +8,16 @@ public final class StateMachineBeanNames {
     private StateMachineBeanNames() {}
 
     // Actions
-    public static final String ACTION_CREATE_ORDER     = "createOrderAction";
+    public static final String ACTION_SUBMIT_ORDER     = "submitOrderAction";
     public static final String ACTION_PAY_ORDER        = "payOrderAction";
     public static final String ACTION_SHIP_ORDER       = "shipOrderAction";
-    public static final String ACTION_CONFIRM_RECEIPT  = "confirmReceiptAction";
+    public static final String ACTION_RECEIVE_ORDER    = "receiveOrderAction";
+    public static final String ACTION_COMPLETE_ORDER   = "completeOrderAction";
     public static final String ACTION_CANCEL_ORDER     = "cancelOrderAction";
-    public static final String ACTION_REQUEST_REFUND   = "requestRefundAction";
-    public static final String ACTION_APPROVE_REFUND   = "approveRefundAction";
-    public static final String ACTION_COMPLETE_REFUND  = "completeRefundAction";
-    public static final String ACTION_REJECT_REFUND    = "rejectRefundAction";
-    public static final String ACTION_PAYMENT_TIMEOUT  = "paymentTimeoutAction";
+    public static final String ACTION_REFUND           = "refundAction";
+    public static final String ACTION_REFUND_APPROVE   = "refundApproveAction";
+    public static final String ACTION_REFUND_REJECT    = "refundRejectAction";
+    public static final String ACTION_TIMEOUT          = "timeoutAction";
 
     // Guards
     public static final String GUARD_CAN_CANCEL        = "canCancelGuard";
