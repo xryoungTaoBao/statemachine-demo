@@ -20,12 +20,8 @@ import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
-
 /**
  * Default implementation of {@link OrderStateMachineService}.
- * Creates or restores a state machine per order, sends the event, persists
- * a state-history record and an event-log entry, then releases the machine.
  */
 @Slf4j
 @Service
@@ -48,7 +44,6 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
             sm.getExtendedState().getVariables().put(StateMachineContextKeys.ORDER_NO,      order.getOrderNo());
             sm.getExtendedState().getVariables().put(StateMachineContextKeys.USER_ID,       order.getUserId());
             sm.getExtendedState().getVariables().put(StateMachineContextKeys.OPERATOR_ID,   request != null ? request.getOperatorId()   : null);
-            sm.getExtendedState().getVariables().put(StateMachineContextKeys.OPERATOR_TYPE, request != null ? request.getOperatorType() : "SYSTEM");
             sm.getExtendedState().getVariables().put(StateMachineContextKeys.REMARK,        request != null ? request.getRemark()       : null);
             if (request != null) {
                 if (request.getTrackingNo()    != null) sm.getExtendedState().getVariables().put(StateMachineContextKeys.TRACKING_NO,    request.getTrackingNo());
@@ -68,11 +63,11 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
             if (accepted && !stateAfter.equals(stateBefore)) {
                 saveHistory(order, stateBefore, stateAfter, event, request);
-                saveEventLog(order, event, stateBefore, stateAfter, true, null, duration, request);
+                saveEventLog(order, event, stateBefore, stateAfter, "ACCEPTED", null, null, duration);
                 log.info("Order {} transitioned {} -> {} via {}", order.getOrderNo(), stateBefore, stateAfter, event);
             } else {
-                saveEventLog(order, event, stateBefore, null, false,
-                        "Event rejected or no state change", duration, request);
+                saveEventLog(order, event, stateBefore, null, "DENIED",
+                        "EVENT_REJECTED", "Event rejected or no state change", duration);
                 throw new BusinessException("Event " + event + " rejected in state " + stateBefore);
             }
         } finally {
@@ -102,32 +97,31 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
     private void saveHistory(Order order, OrderState from, OrderState to,
                              OrderEvent event, OrderEventRequest request) {
-        historyService.saveHistory(new OrderStateHistory()
+        OrderStateHistory history = new OrderStateHistory()
                 .setOrderId(order.getId())
                 .setOrderNo(order.getOrderNo())
                 .setFromState(from.name())
                 .setToState(to.name())
                 .setEvent(event.name())
+                .setEventType("NORMAL")
                 .setOperatorId(request != null ? request.getOperatorId() : null)
-                .setOperatorType(request != null ? request.getOperatorType() : "SYSTEM")
-                .setRemark(request != null ? request.getRemark() : null)
-                .setCreateTime(LocalDateTime.now()));
+                .setOperatorName(request != null ? request.getOperatorName() : null)
+                .setRemark(request != null ? request.getRemark() : null);
+        historyService.saveHistory(history);
     }
 
     private void saveEventLog(Order order, OrderEvent event, OrderState before, OrderState after,
-                              boolean success, String errorMsg, long durationMs,
-                              OrderEventRequest request) {
-        eventLogService.saveLog(new OrderEventLog()
+                              String result, String errorCode, String errorMsg, long durationMs) {
+        OrderEventLog log = new OrderEventLog()
                 .setOrderId(order.getId())
                 .setOrderNo(order.getOrderNo())
                 .setEvent(event.name())
-                .setStateBefore(before.name())
-                .setStateAfter(after != null ? after.name() : null)
-                .setSuccess(success)
-                .setErrorMsg(errorMsg)
-                .setOperatorId(request != null ? request.getOperatorId() : null)
-                .setOperatorType(request != null ? request.getOperatorType() : "SYSTEM")
-                .setDurationMs(durationMs)
-                .setCreateTime(LocalDateTime.now()));
+                .setCurrentState(before.name())
+                .setTargetState(after != null ? after.name() : null)
+                .setResult(result)
+                .setErrorCode(errorCode)
+                .setErrorMessage(errorMsg)
+                .setExecutionTimeMs(durationMs);
+        eventLogService.saveLog(log);
     }
 }

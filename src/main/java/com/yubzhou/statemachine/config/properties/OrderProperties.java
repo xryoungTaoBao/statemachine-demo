@@ -5,12 +5,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 状态机配置属性
+ * 订单配置属性
+ * <p>
+ * Note: This class binds to the same prefix ({@code statemachine.order}) as
+ * {@link StateMachineProperties} and provides the same set of properties.
+ * It exists as a dedicated bean for components that logically belong to the
+ * order domain rather than the state-machine infrastructure layer.
+ * </p>
  */
 @Data
 @Component
 @ConfigurationProperties(prefix = "statemachine.order")
-public class StateMachineProperties {
+public class OrderProperties {
 
     /** 状态机 ID 前缀 */
     private String machineIdPrefix = "order-sm-";

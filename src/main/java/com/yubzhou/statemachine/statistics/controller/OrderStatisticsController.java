@@ -16,7 +16,7 @@ import java.util.Map;
  */
 @Tag(name = "Order Statistics API", description = "Order statistics and reporting")
 @RestController
-@RequestMapping("/api/statistics/orders")
+@RequestMapping("/api/v1/statistics")
 @RequiredArgsConstructor
 public class OrderStatisticsController {
 

@@ -1,12 +1,11 @@
 package com.yubzhou.statemachine.scheduler;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yubzhou.statemachine.config.properties.StateMachineProperties;
 import com.yubzhou.statemachine.order.dto.OrderEventRequest;
 import com.yubzhou.statemachine.order.entity.Order;
 import com.yubzhou.statemachine.order.service.OrderEventLogService;
 import com.yubzhou.statemachine.order.service.OrderService;
 import com.yubzhou.statemachine.statemachine.enums.OrderEvent;
-import com.yubzhou.statemachine.statemachine.enums.OrderState;
 import com.yubzhou.statemachine.statemachine.service.OrderStateMachineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +19,7 @@ import java.util.List;
 /**
  * Scheduled tasks for automated order lifecycle management:
  * <ul>
- *   <li>Auto-cancel orders whose payment deadline has passed.</li>
+ *   <li>Auto-cancel orders whose payment window has passed.</li>
  *   <li>Auto-confirm receipt for orders shipped beyond the timeout window.</li>
  *   <li>Purge old event-log rows.</li>
  * </ul>
@@ -33,6 +32,7 @@ public class OrderScheduler {
     private final OrderService orderService;
     private final OrderStateMachineService stateMachineService;
     private final OrderEventLogService eventLogService;
+    private final StateMachineProperties smProperties;
 
     @Value("${scheduler.payment-timeout.enabled:true}")
     private boolean paymentTimeoutEnabled;
@@ -46,23 +46,18 @@ public class OrderScheduler {
     @Value("${scheduler.event-log-cleanup.retention-days:90}")
     private int retentionDays;
 
-    @Value("${statemachine.order.auto-receive-days:15}")
-    private int autoReceiveDays;
-
-    /** Cancel unpaid orders whose timeout_at is in the past. */
+    /** Cancel unpaid PENDING orders created before the payment timeout window. */
     @Scheduled(cron = "${scheduler.payment-timeout.cron:0 * * * * ?}")
     public void cancelTimedOutOrders() {
         if (!paymentTimeoutEnabled) return;
 
-        List<Order> timedOut = orderService.list(new LambdaQueryWrapper<Order>()
-                .eq(Order::getState, OrderState.PENDING.name())
-                .lt(Order::getTimeoutAt, LocalDateTime.now()));
+        LocalDateTime timeoutBefore = LocalDateTime.now().minusMinutes(smProperties.getPaymentTimeoutMinutes());
+        List<Order> timedOut = orderService.listPendingTimeoutOrders(timeoutBefore);
 
         if (timedOut.isEmpty()) return;
         log.info("Found {} orders to auto-cancel (payment timeout)", timedOut.size());
 
         OrderEventRequest req = new OrderEventRequest();
-        req.setOperatorType("SYSTEM");
         req.setRemark("Auto-cancelled due to payment timeout");
 
         for (Order order : timedOut) {
@@ -79,16 +74,14 @@ public class OrderScheduler {
     public void autoConfirmReceipt() {
         if (!autoReceiveEnabled) return;
 
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(autoReceiveDays);
-        List<Order> shipped = orderService.list(new LambdaQueryWrapper<Order>()
-                .eq(Order::getState, OrderState.SHIPPED.name())
-                .lt(Order::getShipTime, cutoff));
+        int autoReceiveDays = smProperties.getAutoReceiveDays();
+        LocalDateTime shipBefore = LocalDateTime.now().minusDays(autoReceiveDays);
+        List<Order> shipped = orderService.listShippedAutoReceiveOrders(shipBefore);
 
         if (shipped.isEmpty()) return;
         log.info("Found {} orders to auto-confirm receipt", shipped.size());
 
         OrderEventRequest req = new OrderEventRequest();
-        req.setOperatorType("SYSTEM");
         req.setRemark("Auto-confirmed receipt after " + autoReceiveDays + " days");
 
         for (Order order : shipped) {

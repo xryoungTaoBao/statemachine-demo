@@ -10,8 +10,11 @@ import java.util.List;
  */
 public interface OrderStateHistoryService extends IService<OrderStateHistory> {
 
-    /** Return all history rows for a given order, newest first. */
+    /** Return all history rows for a given order, oldest first. */
     List<OrderStateHistory> listByOrderId(Long orderId);
+
+    /** Return the most recent N normal history rows for a given order. */
+    List<OrderStateHistory> listRecentByOrderId(Long orderId, int limit);
 
     /** Persist a single transition record. */
     void saveHistory(OrderStateHistory history);

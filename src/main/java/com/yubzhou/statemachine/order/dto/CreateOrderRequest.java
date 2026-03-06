@@ -20,10 +20,6 @@ public class CreateOrderRequest {
     @Schema(description = "User ID", example = "1001")
     private Long userId;
 
-    @NotNull
-    @Schema(description = "Product ID", example = "2001")
-    private Long productId;
-
     @NotBlank
     @Schema(description = "Product name", example = "Wireless Headphones")
     private String productName;
@@ -35,8 +31,8 @@ public class CreateOrderRequest {
 
     @NotNull
     @Positive
-    @Schema(description = "Unit price", example = "299.00")
-    private BigDecimal unitPrice;
+    @Schema(description = "Order amount", example = "299.00")
+    private BigDecimal amount;
 
     @Schema(description = "Order remark")
     private String remark;

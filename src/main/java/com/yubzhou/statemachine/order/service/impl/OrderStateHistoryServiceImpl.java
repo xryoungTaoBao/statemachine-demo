@@ -21,9 +21,12 @@ public class OrderStateHistoryServiceImpl
 
     @Override
     public List<OrderStateHistory> listByOrderId(Long orderId) {
-        return list(new LambdaQueryWrapper<OrderStateHistory>()
-                .eq(OrderStateHistory::getOrderId, orderId)
-                .orderByDesc(OrderStateHistory::getCreateTime));
+        return baseMapper.selectByOrderId(orderId);
+    }
+
+    @Override
+    public List<OrderStateHistory> listRecentByOrderId(Long orderId, int limit) {
+        return baseMapper.selectRecentByOrderId(orderId, limit);
     }
 
     @Override

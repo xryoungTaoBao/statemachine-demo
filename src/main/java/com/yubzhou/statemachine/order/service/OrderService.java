@@ -7,6 +7,7 @@ import com.yubzhou.statemachine.order.dto.OrderVO;
 import com.yubzhou.statemachine.order.entity.Order;
 import com.yubzhou.statemachine.statemachine.enums.OrderEvent;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -28,4 +29,16 @@ public interface OrderService extends IService<Order> {
 
     /** List all orders for a user. */
     List<OrderVO> listByUserId(Long userId);
+
+    /** Rollback order to the previous state. */
+    OrderVO rollbackState(Long orderId, OrderEventRequest request);
+
+    /** Get available events for the current order state. */
+    List<String> getAvailableEvents(Long orderId);
+
+    /** List PENDING orders created before the given time (for payment timeout). */
+    List<Order> listPendingTimeoutOrders(LocalDateTime createdBefore);
+
+    /** List SHIPPED orders shipped before the given time (for auto-receive). */
+    List<Order> listShippedAutoReceiveOrders(LocalDateTime shippedBefore);
 }

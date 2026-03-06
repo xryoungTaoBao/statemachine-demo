@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "Order Management API", description = "Back-office operations for order management")
 @RestController
-@RequestMapping("/api/management/orders")
+@RequestMapping("/api/v1/state-machine")
 @RequiredArgsConstructor
 public class OrderManagementController {
 

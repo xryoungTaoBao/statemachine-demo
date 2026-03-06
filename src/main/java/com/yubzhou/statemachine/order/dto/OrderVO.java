@@ -28,17 +28,11 @@ public class OrderVO {
     @Schema(description = "Quantity")
     private Integer quantity;
 
-    @Schema(description = "Unit price")
-    private BigDecimal unitPrice;
-
-    @Schema(description = "Total amount")
-    private BigDecimal totalAmount;
+    @Schema(description = "Order amount")
+    private BigDecimal amount;
 
     @Schema(description = "Current state")
     private String state;
-
-    @Schema(description = "Remark")
-    private String remark;
 
     @Schema(description = "Payment time")
     private LocalDateTime paymentTime;
@@ -49,14 +43,29 @@ public class OrderVO {
     @Schema(description = "Receipt confirmation time")
     private LocalDateTime receiveTime;
 
+    @Schema(description = "Complete time")
+    private LocalDateTime completeTime;
+
     @Schema(description = "Cancel time")
     private LocalDateTime cancelTime;
 
-    @Schema(description = "Refund completion time")
-    private LocalDateTime refundTime;
+    @Schema(description = "Cancel reason")
+    private String cancelReason;
 
-    @Schema(description = "Payment deadline")
-    private LocalDateTime timeoutAt;
+    @Schema(description = "Tracking number")
+    private String trackingNo;
+
+    @Schema(description = "Logistics company")
+    private String logisticsCompany;
+
+    @Schema(description = "Refund reason")
+    private String refundReason;
+
+    @Schema(description = "Refund amount")
+    private BigDecimal refundAmount;
+
+    @Schema(description = "Remark")
+    private String remark;
 
     @Schema(description = "Creation time")
     private LocalDateTime createTime;

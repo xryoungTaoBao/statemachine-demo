@@ -50,8 +50,8 @@ public class OrderStatePersistInterceptor
             case PAID      -> update.setPaymentTime(LocalDateTime.now());
             case SHIPPED   -> update.setShipTime(LocalDateTime.now());
             case RECEIVED  -> update.setReceiveTime(LocalDateTime.now());
+            case COMPLETED -> update.setCompleteTime(LocalDateTime.now());
             case CANCELLED -> update.setCancelTime(LocalDateTime.now());
-            case CLOSED    -> update.setRefundTime(LocalDateTime.now());
             default        -> { /* no extra timestamp */ }
         }
 
